@@ -26,18 +26,6 @@ const createPhotoRequest = (text) => {
   );
 };
 
-// use async to fetch both photos without blocking
-const fetchPhotos = async () => {
-  try {
-    return await Promise.all([
-      createPhotoRequest(greeting),
-      createPhotoRequest(who),
-    ]);
-  } catch {
-    throw Error("Promise failed");
-  }
-};
-
 const savePhoto = async (img) => {
   img.getBuffer("image/jpeg", (err, buffer) => {
     if (err) {
@@ -53,18 +41,22 @@ const savePhoto = async (img) => {
     });
   });
 
-  // @@@@
-  // @@ Note: I would refactor to Async/Await but getBufferAsync doesn't work in the version
-  // @@ of jimp used by merge-img, due to the scope of the exercise, I left as promise chaining.
-  // @@@@@
-  // const imgBuffer = await img.getBufferAsync("image/jpeg");
-  // const fileOut = join(process.cwd(), `/cat-card.jpg`);
-  // writeFile(fileOut, imgBuffer, "binary");
-  // savePhoto(img);
+  // Note: I would refactor to Async/Await but getBufferAsync doesn't work in the version
+  // of jimp used by merge-img, due to the scope of the exercise, I left as promise chaining.
+  //
+  //    const imgBuffer = await img.getBufferAsync("image/jpeg");
+  //    const fileOut = join(process.cwd(), `/cat-card.jpg`);
+  //    writeFile(fileOut, imgBuffer, "binary");
+  //    savePhoto(img);
 };
 
 const mergePhotos = async () => {
-  const [firstBody, secondBody] = await fetchPhotos();
+  const [firstBody, secondBody] = await Promise.all([
+    createPhotoRequest(greeting),
+    createPhotoRequest(who),
+  ]).catch((err) => {
+    throw Error(`Promise Failed: ${err}`)
+  });
 
   const img = await mergeImg([
     { src: firstBody.data, x: 0, y: 0 },
