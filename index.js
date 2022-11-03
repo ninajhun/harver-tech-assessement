@@ -1,4 +1,4 @@
-//use const instead of let
+// use const instead of let
 const { writeFile } = require("fs");
 const { join } = require("path");
 
@@ -16,16 +16,17 @@ let {
   size = 100,
 } = argv;
 
-// create function to reduce redundant code
+// create function to reduce redundant code of requests
 const createPhotoRequest = (text) => {
-  // https://cataas.com/cat/says/Hi%20There?width=500&amp;height=800&amp;c=Cyan&amp;s=150
+  // refactor to use axios + return arrayBuffer responseType
   return axios.get(
+    // https://cataas.com/cat/says/Hi%20There?width=500&amp;height=800&amp;c=Cyan&amp;s=150
     `https://cataas.com/cat/says/${text}?width=${width}&height=${height}&color=${color}&s={size}`,
     { responseType: "arraybuffer" }
   );
 };
 
-//use async to fetch both photos without blocking
+// use async to fetch both photos without blocking
 const fetchPhotos = async () => {
   try {
     return await Promise.all([
@@ -54,7 +55,7 @@ const savePhoto = async (img) => {
 
   // @@@@
   // @@ Note: I would refactor to Async/Await but getBufferAsync doesn't work in the version
-  // @@ of Jimp used by mergeImg, due to the scope of the exercise, I left as promise chaining.
+  // @@ of jimp used by merge-img, due to the scope of the exercise, I left as promise chaining.
   // @@@@@
   // const imgBuffer = await img.getBufferAsync("image/jpeg");
   // const fileOut = join(process.cwd(), `/cat-card.jpg`);
