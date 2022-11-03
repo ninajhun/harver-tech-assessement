@@ -1,57 +1,69 @@
-let { writeFile } = require('fs');
-let { join } = require('path');
-let request = require('request');
-let mergeImg = require('merge-img');
-let argv = require('minimist')(process.argv.slice(2));
+// use const instead of let
+const { writeFile } = require("fs");
+const { join } = require("path");
+
+// let request = require("request"); //deprecated package use axios as alternative
+const axios = require("axios");
+const mergeImg = require("merge-img");
+const argv = require("minimist")(process.argv.slice(2));
 
 let {
-    greeting = 'Hello', who = 'You',
-    width = 400, height = 500, color = 'Pink', size = 100,
+  greeting = "Hello",
+  who = "You",
+  width = 400,
+  height = 500,
+  color = "Pink",
+  size = 100,
 } = argv;
 
-let firstReq = {
-// https://cataas.com/cat/says/Hi%20There?width=500&amp;height=800&amp;c=Cyan&amp;s=150
-url: 'https://cataas.com/cat/says/' + greeting + '?width=' + width + '&height=' + height + '&color' + color + '&s=' + size, encoding: 'binary'
+// create function to reduce redundant code of requests
+const createPhotoRequest = (text) => {
+  // refactor to use axios + return arrayBuffer responseType
+  return axios.get(
+    // https://cataas.com/cat/says/Hi%20There?width=500&amp;height=800&amp;c=Cyan&amp;s=150
+    `https://cataas.com/cat/says/${text}?width=${width}&height=${height}&color=${color}&s={size}`,
+    { responseType: "arraybuffer" }
+  );
 };
 
-let secondReq = {
-    url: 'https://cataas.com/cat/says/' + who + '?width=' + width + '&height=' + height + '&color' + color + '&s=' + size, encoding: 'binary'
-};
-
-request.get(firstReq, (err, res, firstBody) => { 
-    if(err) {
-        console.log(err);
-        return; 
+const savePhoto = async (img) => {
+  img.getBuffer("image/jpeg", (err, buffer) => {
+    if (err) {
+      console.log(err);
     }
-    
-    console.log('Received response with status:' + res.statusCode);
-    
-    request.get(secondReq, (err, res, secondBody) => { 
-        if(err) {
-            console.log(err);
-            return; 
-        }
-        
-        console.log('Received response with status:' + res.statusCode); 
+    const fileOut = join(process.cwd(), `/cat-card.jpg`);
+    writeFile(fileOut, buffer, "binary", (err) => {
+      if (err) {
+        console.log(err);
+        return;
+      }
+      console.log("The file was saved!");
+    });
+  });
 
-        mergeImg([ 
-          { src: new Buffer(firstBody, 'binary'), x: 0, y:0 }, 
-          { src: new Buffer(secondBody, 'binary'), x: width, y: 0 }
-        ]).then(img => {
-          img.getBuffer('image/jpeg', (err, buffer) => {
-                if (err) {
-                  console.log(err)
-                }
+  // Note: I would refactor to Async/Await but getBufferAsync doesn't work in the version
+  // of jimp used by merge-img, due to the scope of the exercise, I left as promise chaining.
+  //
+  //    const imgBuffer = await img.getBufferAsync("image/jpeg");
+  //    const fileOut = join(process.cwd(), `/cat-card.jpg`);
+  //    writeFile(fileOut, imgBuffer, "binary");
+  //    savePhoto(img);
+};
 
-                const fileOut = join(process.cwd(), `/cat-card.jpg`);
-                
-                writeFile(fileOut, buffer, 'binary', (err) => { if(err) {
-                    console.log(err);
-                    return; 
-                }
-                
-                console.log("The file was saved!"); });
-              });
-            }); 
-        });
-});
+const mergePhotos = async () => {
+  const [firstBody, secondBody] = await Promise.all([
+    createPhotoRequest(greeting),
+    createPhotoRequest(who),
+  ]).catch((err) => {
+    throw Error(`Promise Failed: ${err}`)
+  });
+
+  const img = await mergeImg([
+    { src: firstBody.data, x: 0, y: 0 },
+    { src: secondBody.data, x: width, y: 0 },
+  ]);
+
+  savePhoto(img);
+};
+
+mergePhotos();
